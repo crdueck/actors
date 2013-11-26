@@ -16,6 +16,3 @@ data ActorContext = ActorContext
 
 instance Eq ActorContext where
     c1 == c2 = self c1 == self c2
-
-instance Ord ActorContext where
-    c1 `compare` c2 = self c1 `compare` self c2

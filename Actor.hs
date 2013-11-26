@@ -1,6 +1,5 @@
 module Actor where
 
-import ActorRef
 import ActorContext
 
 import Control.Concurrent
@@ -22,10 +21,3 @@ runActor actor ctx mailbox = forever $ do
         Just msg -> atomically (process msg) >>= maybe (unhandled msg) return
     where process   msg = runMaybeT $ runReaderT (actor `receive` msg) ctx
           unhandled msg = putStr "unhandled: " >> print msg
-
-echo :: Actor
-echo = Actor $ \msg -> do
-    ctx <- ask
-    lift . lift $ do
-        rep <- readTVar $ sender ctx
-        rep ! msg
