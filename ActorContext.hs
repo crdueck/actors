@@ -3,6 +3,7 @@ module ActorContext where
 import ActorSystem
 import ActorRef
 
+import Control.Applicative
 import Control.Concurrent.STM
 import qualified Data.Set as Set
 
@@ -16,3 +17,7 @@ data ActorContext = ActorContext
 
 instance Eq ActorContext where
     c1 == c2 = self c1 == self c2
+
+newActorContext :: ActorRef -> ActorRef -> ActorSystem -> IO ActorContext
+newActorContext parent self system =
+    ActorContext Set.empty parent self system <$> newTVarIO (deadletters system)

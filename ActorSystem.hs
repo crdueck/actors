@@ -15,12 +15,14 @@ type Mailbox = TQueue Dynamic
 type ConcurrentMap k v = TVar (M.Map k v)
 
 data ActorSystem = ActorSystem
-    { deadletters :: ActorRef
-    , newActorRef :: String -> IO (ActorRef, Mailbox)
-    , registry    :: ConcurrentMap ActorRef Mailbox
-    , rootPath    :: ActorPath
-    , shutdown    :: IO ()
-    , terminated  :: IO Bool
+    { deadletters    :: ActorRef
+    , newActorRef    :: String -> IO (ActorRef, Mailbox)
+    , registry       :: ConcurrentMap ActorRef Mailbox
+    , rootPath       :: ActorPath
+    , userGuardian   :: ActorRef
+    , systemGuardian :: ActorRef
+    , shutdown       :: IO ()
+    , terminated     :: IO Bool
     }
 
 theDeadletters :: ActorRef
@@ -48,11 +50,13 @@ newActorSystem name = do
             return (ref, mbox)
 
     return $ ActorSystem
-        { deadletters = theDeadletters
-        , newActorRef = newActorRef
-        , registry    = registry
-        , rootPath    = undefined
-        , shutdown    = putMVar terminated () -- TODO
-        , terminated  = not <$> isEmptyMVar terminated
+        { deadletters    = theDeadletters
+        , newActorRef    = newActorRef
+        , registry       = registry
+        , rootPath       = undefined
+        , userGuardian   = undefined
+        , systemGuardian = undefined
+        , shutdown       = putMVar terminated () -- TODO
+        , terminated     = not <$> isEmptyMVar terminated
         }
 

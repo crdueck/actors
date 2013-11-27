@@ -6,18 +6,14 @@ import ActorRef
 import ActorSystem
 import ExecutionContext
 
-import Control.Concurrent.STM
-import qualified Data.Set as Set
-
 class ActorRefFactory factory where
     actorOf     :: factory -> Actor -> String -> IO ActorRef
     dispatcher  :: factory -> ExecutionContext
 
 instance ActorRefFactory ActorSystem where
     actorOf system actor name = do
-        sender      <- newTVarIO $ deadletters system
         (ref, mbox) <- newActorRef system name
-        let ctx = ActorContext Set.empty undefined ref system sender
+        ctx <- newActorContext (userGuardian system) ref system
         dispatcher system `offer` runActor actor ctx mbox
         return ref
 
@@ -25,9 +21,8 @@ instance ActorRefFactory ActorSystem where
 
 instance ActorRefFactory ActorContext where
     actorOf context actor name = do
-        sender      <- newTVarIO . deadletters $ system context
         (ref, mbox) <- newActorRef (system context) name
-        let ctx = ActorContext Set.empty (self context) ref (system context) sender
+        ctx <- newActorContext (self context) ref (system context)
         dispatcher context `offer` runActor actor ctx mbox
         return ref
 

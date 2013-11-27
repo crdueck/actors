@@ -4,8 +4,7 @@ module ActorRef where
 
 import ActorPath
 
-import Control.Concurrent.STM
-import Data.Dynamic
+import Data.Typeable
 import Data.Unique
 
 data ActorRef = ActorRef
