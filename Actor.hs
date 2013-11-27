@@ -8,16 +8,16 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Maybe
 import Data.Dynamic
 
-newtype Actor = Actor { receive :: Receive }
-
 type Mailbox = TQueue Dynamic
-type Receive = Dynamic -> ReaderT ActorContext (MaybeT STM) ()
+type Receive = Dynamic -> ReaderT ActorContext (MaybeT IO) ()
+
+newtype Actor = Actor { receive :: Receive }
 
 runActor :: Actor -> ActorContext -> Mailbox -> IO ()
 runActor actor ctx mailbox = forever $ do
     mail <- atomically $ tryReadTQueue mailbox
     case mail of
         Nothing  -> yield
-        Just msg -> atomically (process msg) >>= maybe (unhandled msg) return
+        Just msg -> process msg >>= maybe (unhandled msg) return
     where process   msg = runMaybeT $ runReaderT (actor `receive` msg) ctx
           unhandled msg = putStr "unhandled: " >> print msg

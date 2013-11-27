@@ -27,7 +27,7 @@ library
     base >=4.5,
     stm >=2.4,
     mtl >=2.1,
-    containers >= 0.5.3,
+    containers >= 0.5,
     transformers >= 0.3
 
   ghc-options: -O2 -Wall

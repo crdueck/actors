@@ -1,16 +1,17 @@
+{-# LANGUAGE RankNTypes #-}
+
 module ActorRef where
 
 import ActorPath
 
 import Control.Concurrent.STM
 import Data.Dynamic
-import Data.Word
+import Data.Unique
 
 data ActorRef = ActorRef
-    { (!)  :: Dynamic -> STM ()
-    , (?)  :: Dynamic -> STM Dynamic
+    { (!)  :: forall a. Typeable a => a -> IO ()
     , path :: ActorPath
-    , uuid :: Word32
+    , uuid :: Unique
     }
 
 instance Show ActorRef where
