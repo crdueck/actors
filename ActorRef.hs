@@ -4,7 +4,7 @@ module ActorRef where
 
 import ActorPath
 
-import Data.Dynamic
+import Data.Typeable
 import Data.Unique
 
 data ActorRef = ActorRef
