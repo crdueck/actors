@@ -2,12 +2,16 @@ module ActorRefFactory where
 
 import Actor
 import ActorContext
+import ActorPath
 import ActorRef
 import ActorSystem
 import ExecutionContext
 
+import Prelude hiding ((/))
 import Control.Concurrent.STM
-import qualified Data.Set as Set
+import Data.Dynamic
+import Data.IORef
+import Data.Unique
 
 class ActorRefFactory factory where
     actorOf     :: factory -> Actor -> String -> IO ActorRef
@@ -15,20 +19,38 @@ class ActorRefFactory factory where
 
 instance ActorRefFactory ActorSystem where
     actorOf system actor name = do
-        sender      <- newTVarIO $ deadletters system
-        (ref, mbox) <- newActorRef system name
-        let ctx = ActorContext Set.empty undefined ref system sender
-        dispatcher system `offer` runActor actor ctx mbox
+        sender  <- fmap readIORef . newIORef $ deadletters system
+        mailbox <- newTQueueIO
+        uuid    <- newUnique
+
+        let ctx = newActorContext (usrGuardian system) ref sender system
+            ref = ActorRef
+                { (!)  = atomically . writeTQueue mailbox . toDyn
+                , path = rootPath system / name
+                , uuid = uuid
+                }
+
+        register system ref mailbox
+        dispatcher system `offer` runActor actor ctx mailbox
         return ref
 
     dispatcher = const globalExecutionContext
 
 instance ActorRefFactory ActorContext where
     actorOf context actor name = do
-        sender      <- newTVarIO . deadletters $ system context
-        (ref, mbox) <- newActorRef (system context) name
-        let ctx = ActorContext Set.empty (self context) ref (system context) sender
-        dispatcher context `offer` runActor actor ctx mbox
+        sender  <- fmap readIORef . newIORef . deadletters $ system context
+        mailbox <- newTQueueIO
+        uuid    <- newUnique
+
+        let ctx = newActorContext (self context) ref sender (system context)
+            ref = ActorRef
+                { (!)  = atomically . writeTQueue mailbox . toDyn
+                , path = path (self context) / name
+                , uuid = uuid
+                }
+
+        register (system context) ref mailbox
+        dispatcher context `offer` runActor actor ctx mailbox
         return ref
 
     -- TODO: use sub-context of global context

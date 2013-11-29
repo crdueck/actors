@@ -3,24 +3,23 @@ module ActorSystem where
 import ActorRef
 import ActorPath
 
-import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Dynamic
 import Data.Unique
 import System.IO.Unsafe
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 type Mailbox = TQueue Dynamic
-type ConcurrentMap k v = TVar (M.Map k v)
 
 data ActorSystem = ActorSystem
     { deadletters :: ActorRef
-    , newActorRef :: String -> IO (ActorRef, Mailbox)
-    , registry    :: ConcurrentMap ActorRef Mailbox
+    , register    :: ActorRef -> Mailbox -> IO ()
     , rootPath    :: ActorPath
     , shutdown    :: IO ()
     , terminated  :: IO Bool
+    , sysGuardian :: ActorRef
+    , usrGuardian :: ActorRef
     }
 
 theDeadletters :: ActorRef
@@ -34,25 +33,13 @@ theDeadletters = ActorRef
 newActorSystem :: String -> IO ActorSystem
 newActorSystem name = do
     terminated <- newEmptyMVar
-    registry   <- newTVarIO M.empty
-
-    let newActorRef name = do
-            mbox <- newTQueueIO
-            uuid <- newUnique
-            let ref = ActorRef
-                    { (!)  = atomically . writeTQueue mbox . toDyn
-                    , path = undefined
-                    , uuid = uuid
-                    }
-            atomically . modifyTVar registry $ M.insert ref mbox
-            return (ref, mbox)
-
+    registry   <- newTVarIO Map.empty
     return $ ActorSystem
         { deadletters = theDeadletters
-        , newActorRef = newActorRef
-        , registry    = registry
+        , register    = ((atomically . modifyTVar registry) .) . Map.insert
         , rootPath    = undefined
         , shutdown    = putMVar terminated () -- TODO
-        , terminated  = not <$> isEmptyMVar terminated
+        , terminated  = fmap not $ isEmptyMVar terminated
+        , sysGuardian = undefined
+        , usrGuardian = undefined
         }
-

@@ -16,3 +16,9 @@ instance Show ActorPath where
 instance Eq ActorPath where
     p1 == p2 =
         address p1 == address p2 && parent p1 == parent p2 && name p1 == name p2
+
+-- TODO: instance Ord where
+
+splitActorPath :: ActorPath -> [String]
+splitActorPath = reverse . go
+    where go path = name path : go (parent path)
